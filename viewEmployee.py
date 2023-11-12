@@ -11,6 +11,13 @@ class ViewEmployeesWindow:
         self.window = tk.Toplevel(parent)
         self.window.title("View Employees")
 
+        self.search_frame = tk.Frame(self.window)
+        self.search_entry = tk.Entry(self.search_frame)
+        self.search_button = tk.Button(self.search_frame, text="Search", command=self.search_employee)
+        self.search_entry.pack(side=tk.LEFT)
+        self.search_button.pack(side=tk.LEFT)
+        self.search_frame.pack(pady=10)
+
         # Table (Hindi ko sure ngaa ga blanko ang una nga cell te gin idog ko na lang ang mga headers muna nag start ta sa #1 instead of #0)
         self.tree = ttk.Treeview(self.window, columns=('ID', 'First Name', 'Last Name', 'Employee ID', 'Days Worked', 'Overtime', 'Deductions', 'Gross Salary', 'Net Salary'))
         self.tree.heading('#1', text='ID')
@@ -25,10 +32,8 @@ class ViewEmployeesWindow:
 
         self.tree.pack(expand=True, fill='both')
 
-        # Load employee data
         self.load_employee_data()
 
-    # Diri ang declaration sang rate sang per day nga salary kag ang per hour rate sang overtime
     def calculate_gross_salary(self, days_worked, overtime_hours):
         per_day_salary = 650
         per_hour_overtime_rate = 102
@@ -40,9 +45,15 @@ class ViewEmployeesWindow:
         net_salary = gross_salary - deductions
         return net_salary
 
-    def load_employee_data(self):
+    def search_employee(self):
+        search_term = self.search_entry.get()
+
+
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
         cursor = self.conn.cursor()
-        cursor.execute("SELECT * FROM employees")
+        cursor.execute("SELECT * FROM employees WHERE first_name LIKE ? OR last_name LIKE ? OR employee_id LIKE ?", ('%' + search_term + '%', '%' + search_term + '%', '%' + search_term + '%'))
         employees = cursor.fetchall()
 
         total_salaries = 0
