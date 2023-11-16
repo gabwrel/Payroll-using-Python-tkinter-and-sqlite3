@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 import sqlite3
 
 class ViewEmployeesWindow:
@@ -18,7 +19,7 @@ class ViewEmployeesWindow:
         self.search_button.pack(side=tk.LEFT)
         self.search_frame.pack(pady=10)
 
-        # Table (Hindi ko sure ngaa ga blanko ang una nga cell te gin idog ko na lang ang mga headers muna nag start ta sa #1 instead of #0)
+        # Table
         self.tree = ttk.Treeview(self.window, columns=('ID', 'First Name', 'Last Name', 'Employee ID', 'Days Worked', 'Overtime', 'Deductions', 'Gross Salary', 'Net Salary'))
         self.tree.heading('#1', text='ID')
         self.tree.heading('#2', text='First Name')
@@ -32,7 +33,27 @@ class ViewEmployeesWindow:
 
         self.tree.pack(expand=True, fill='both')
 
+        # Call the load_employee_data method
         self.load_employee_data()
+
+    def load_employee_data(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM employees")
+        employees = cursor.fetchall()
+
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        for employee in employees:
+            gross_salary = self.calculate_gross_salary(employee[4], employee[5])
+            net_salary = self.calculate_net_salary(gross_salary, employee[6])
+
+            self.tree.insert('', 'end', values=(employee[0], employee[1], employee[2], employee[3], employee[4], employee[5], employee[6], gross_salary, net_salary))
+
+        # Adjust column widths based on content
+        for col in self.tree["columns"]:
+            self.tree.column(col, width=tk.ALL)
+
 
     def calculate_gross_salary(self, days_worked, overtime_hours):
         per_day_salary = 650
@@ -48,7 +69,6 @@ class ViewEmployeesWindow:
     def search_employee(self):
         search_term = self.search_entry.get()
 
-
         for item in self.tree.get_children():
             self.tree.delete(item)
 
@@ -59,19 +79,15 @@ class ViewEmployeesWindow:
         total_salaries = 0
 
         for employee in employees:
-            # Gross salary kag net salary math
             gross_salary = self.calculate_gross_salary(employee[4], employee[5])
             net_salary = self.calculate_net_salary(gross_salary, employee[6])
 
-            # Update the database with the calculated values
             cursor.execute("UPDATE employees SET gross_salary=?, net_salary=? WHERE id=?", (gross_salary, net_salary, employee[0]))
             self.conn.commit()
 
-            # Ensure the values correspond to the correct columns
             self.tree.insert('', 'end', values=(employee[0], employee[1], employee[2], employee[3], employee[4], employee[5], employee[6], gross_salary, net_salary))
 
-            # Update total salaries
             total_salaries += net_salary
 
-        # Displays the calculated total salary to be paid to all the employees
         self.tree.insert('', 'end', values=('Total Salaries', '', '', '', '', '', '', '', total_salaries))
+
